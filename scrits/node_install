@@ -1,5 +1,10 @@
 #!/bin/bash    
 
+WEBHOOK_URL="https://hooks.slack.com/services/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"
+HOSTNAME=$(cat /etc/hostname)
+IP=$(cat /etc/sysconfig/network-scripts/ifcfg-eth0 | grep "^IPADDR=" | cut -d "=" -f 2)
+
+
 preinstall () {
     #SWAP
     fallocate -l 2G /swapfile
@@ -18,11 +23,18 @@ preinstall () {
     #RUN SCRIPT AFTER REBOOT
     crontab -l | { cat; echo "@reboot sh /opt/install.sh install"; } | crontab -
 
-     #REBOOT. SELINUX DISABLE
+    #SEND SLACK
+    curl -X POST -H 'Content-type: application/json' --data '{"text":"'$HOSTNAME' ('$IP') : Running autoinstall script. Preinstall setting installed. Rebooting..."}' $WEBHOOK_URL
+
+    #REBOOT. SELINUX DISABLE
     reboot
 }
 
 install_all () {
+
+    #SEND SLACK
+    curl -X POST -H 'Content-type: application/json' --data '{"text":"'$HOSTNAME' ('$IP') : Node is up! Running install libraries and services. Please wait 10-15 min..."}' $WEBHOOK_URL
+
     #REMOVE RUN SCRIPT AFTER REBOOT
     crontab -r
 
@@ -40,12 +52,23 @@ install_all () {
     #DOWNLOAD CONFIGS
     curl -L "https://raw.githubusercontent.com/unisolzp/linux_dependencies/main/proxy/ssh_config" -o  /etc/ssh/ssh_config
     curl -L "https://raw.githubusercontent.com/unisolzp/linux_dependencies/main/proxy/squid.conf" -o /etc/squid/squid.conf
+    
+    #GENERATE RANDOM PORT AND ADD TO SQUID:
+    RAND_PORT=$(shuf -i 4000-5000 -n 1)
+    sed -i 's/RAND_PORT/4421/g' /etc/squid/squid.conf 
+      
+    #SEND SLACK
+    curl -X POST -H 'Content-type: application/json' --data '{"text":"'$HOSTNAME'('$IP') : USE '$RAND_PORT' in SQUID. Please open '$IP':'$RAND_PORT' in DO firewall: Check: http://'$IP':'$RAND_PORT'"}' $WEBHOOK_URL
    
     #ENABLE AUTORUN SQUID
     systemctl enable squid.service
 
     #RESTART SQUID
     systemctl restart squid.service
+    
+    #SEND SLACK
+    curl -X POST -H 'Content-type: application/json' --data '{"text":"'$HOSTNAME'('$IP') : Installation completed. Please check me: http://'$IP'/. 404 = true. SSH access: ssh -i KEY root@'$IP' "}' $WEBHOOK_URL
+
  }
 
 if [  "$1" == "preinstall" ]
