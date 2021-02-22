@@ -46,11 +46,9 @@ install_all () {
     yum install squid -y
 
     #MOVE CONFIGS TO BACKUP CONFIGS
-    mv /etc/ssh/ssh_config /etc/ssh/ssh_config-backup.conf
     mv /etc/squid/squid.conf /etc/squid/squid-backup.conf
   
     #DOWNLOAD CONFIGS
-    curl -L "https://raw.githubusercontent.com/unisolzp/linux_dependencies/main/proxy/ssh_config" -o  /etc/ssh/ssh_config
     curl -L "https://raw.githubusercontent.com/unisolzp/linux_dependencies/main/proxy/squid.conf" -o /etc/squid/squid.conf
     
     #GENERATE RANDOM PORT AND ADD TO SQUID:
