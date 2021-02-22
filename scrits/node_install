@@ -1,0 +1,62 @@
+#!/bin/bash    
+
+preinstall () {
+    #SWAP
+    fallocate -l 2G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    echo "/swapfile swap swap defaults 0 0" >> /etc/fstab
+
+    #TUNNING LINUX
+    mv /etc/sysctl.conf /etc/sysctl-backup.conf
+    curl -L "https://raw.githubusercontent.com/unisolzp/linux_dependencies/main/general/sysctl.conf" -o /etc/sysctl.conf
+
+    #DISABLE SELINUX
+    sed -i "s/^SELINUX=enforcing/SELINUX=disabled/" /etc/selinux/config
+
+    #RUN SCRIPT AFTER REBOOT
+    crontab -l | { cat; echo "@reboot sh /opt/install.sh install"; } | crontab -
+
+     #REBOOT. SELINUX DISABLE
+    reboot
+}
+
+install_all () {
+    #REMOVE RUN SCRIPT AFTER REBOOT
+    crontab -r
+
+    #INSTALL EPEL REPO AND UPDATE
+    yum install epel* -y
+    yum update -y
+
+    #INSTALL SQUID
+    yum install squid -y
+
+    #MOVE CONFIGS TO BACKUP CONFIGS
+    mv /etc/ssh/ssh_config /etc/ssh/ssh_config-backup.conf
+    mv /etc/squid/squid.conf /etc/squid/squid-backup.conf
+  
+    #DOWNLOAD CONFIGS
+    curl -L "https://raw.githubusercontent.com/unisolzp/linux_dependencies/main/proxy/ssh_config" -o  /etc/ssh/ssh_config
+    curl -L "https://raw.githubusercontent.com/unisolzp/linux_dependencies/main/proxy/squid.conf" -o /etc/squid/squid.conf
+   
+    #ENABLE AUTORUN SQUID
+    systemctl enable squid.service
+
+    #RESTART SQUID
+    systemctl restart squid.service
+ }
+
+if [  "$1" == "preinstall" ]
+then
+    preinstall
+    exit 1
+elif [ "$1" == "install" ]
+then
+    install_all
+    exit 1
+else
+    echo "sh ./install.sh { preinstall | install }"
+    exit 1
+fi
