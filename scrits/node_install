@@ -53,7 +53,7 @@ install_all () {
     
     #GENERATE RANDOM PORT AND ADD TO SQUID:
     RAND_PORT=$(shuf -i 4000-5000 -n 1)
-    sed -i 's/RAND_PORT/4421/g' /etc/squid/squid.conf 
+    sed -i 's/RAND_PORT/$RAND_PORT/g' /etc/squid/squid.conf 
       
     #SEND SLACK
     curl -X POST -H 'Content-type: application/json' --data '{"text":"'$HOSTNAME'('$IP') : USE '$RAND_PORT' in SQUID. Please open '$IP':'$RAND_PORT' in DO firewall: Check: http://'$IP':'$RAND_PORT'"}' $WEBHOOK_URL
